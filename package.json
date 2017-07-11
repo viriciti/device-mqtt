@@ -1,11 +1,26 @@
 {
-  "name": "mqtt-api",
+  "name": "device-mqtt",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "main": "build/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "coffee --output build --compile src",
+    "test": "coffeetape test/*.test.coffee | tap-summary ",
+    "test-debug": "coffeetape ./test/*.test.coffee"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "[git@git.viriciti.com:10022]:device/device-mqtt.git"
+  },
+  "description": "",
+  "dependencies": {
+    "mqtt": "^2.9.1",
+    "randomstring": "^1.1.5"
+  },
+  "devDependencies": {
+    "coffeetape": "^1.0.1",
+    "leaked-handles": "^5.2.0",
+    "tap-summary": "^3.0.2"
+  }
 }
