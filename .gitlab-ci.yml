@@ -1,0 +1,34 @@
+stages:
+  - test
+  - build
+  - release
+
+test:
+  stage: test
+  image: docker.viriciti.com/vems/project-compiler
+  services:
+    - toke/mosquitto
+  script:
+    - npm install --production
+    - npm test
+  only:
+    - tags
+
+build:
+  stage: build
+  image: docker.viriciti.com/vems/project-compiler
+  artifacts:
+    paths:
+      - build
+  script:
+    - npm run build
+  only:
+    - tags
+
+release:
+  stage: release
+  image: docker.viriciti.com/vems/nodejs-project-base
+  script:
+    - npm publish
+  only:
+    - tags
