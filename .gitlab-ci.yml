@@ -10,6 +10,7 @@ test:
     - toke/mosquitto
   script:
     - npm install --production
+    - ln -s /usr/local/bin/tape node_modules/tape
     - npm test
   only:
     - tags

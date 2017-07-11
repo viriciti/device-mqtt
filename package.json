@@ -21,6 +21,7 @@
   "devDependencies": {
     "coffeetape": "^1.0.1",
     "leaked-handles": "^5.2.0",
-    "tap-summary": "^3.0.2"
+    "tap-summary": "^3.0.2",
+    "tape": "^4.7.0"
   }
 }
