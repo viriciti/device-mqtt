@@ -4,13 +4,22 @@
 # 	debugSockets: true
 # }
 
-test       = require 'tape'
-devicemqtt = require '../src/device-mqtt'
+# After running the first test, restart the broker before testing again
 
+test       = require 'tape'
+devicemqtt = require '../src/index'
+{ fork }   = require "child_process"
+
+# Only for pipeline tests
+# config =
+# 	host: 'toke-mosquitto'
+# 	port: 1883
+
+# Only for development
 config =
-	host: 'toke-mosquitto'
-	port: 1883
-	clientId: 'integrationTest'
+	host: 'localhost'
+	port: 7654
+
 
 ### Testing template
 
@@ -24,161 +33,181 @@ test 'What component aspect are you testing?', (assert) ->
 
 ###############################################################
 
-setup = (clientId)->
+setup = (clientId) ->
 	client = null
 	client = devicemqtt Object.assign({}, config, { clientId })
 	return client
+
+forkClient = (clientId) ->
+	client = fork "./meta/client.coffee"
+	client.send Object.assign({}, config, { clientId })
+	return client
+
+teardownForkedClient = (client) ->
+	client.kill 'SIGKILL'
 
 teardown = (client, cb) ->
 	client.destroy cb
 
 
-test 'client send a message when the broker is reacheable', (assert) ->
-	expected = 'OK'
-
-	client = setup 'sender1'
-	client.once 'connected', ->
-		client.send({
-			action: 'action'
-			payload: 'payload'
-			dest: 'dest'
-		},(error, ack, listener) ->
-				assert.equal ack, expected, 'The acknowledgement message should be OK.'
-				teardown client, ->
-					assert.end()
-	)
-
-	client.connect()
-
-
-
-test 'client sends an action to another client', (assert) ->
-	expectedPayload = 'payload'
-	client1 = setup 'sender2'
-	client2 = setup 'receiver2'
-
-	client2.once 'connected', ->
-		client2.listenToActionsAndResults()
-		client2.on 'theaction', (payload) ->
-			assert.equal payload, expectedPayload,
-				'The client received the correct payload'
-			teardown client2, ->
-				teardown client1, ->
-					assert.end()
-
-	client1.once 'connected', ->
-		client1.send action: 'theaction', payload: 'payload', dest: 'receiver2'
-
-	client1.connect()
-	client2.connect()
-
-
-
-test 'client receives an action and sends a response', (assert) ->
-	client1 = setup 'sender3'
-	client2 = setup 'receiver3'
-
-	client2.once 'connected', ->
-		client2.on 'theaction', (payload, reply) ->
-			assert.ok typeof reply.send is 'function'
-
-			reply.send { type: 'success', data: 'somedata' }, (error, ack) ->
-				assert.equal ack, 'OK'
-				teardown client2
-				assert.end()
-
-		client2.listenToActionsAndResults()
-
-	client1.once 'connected', ->
-		client1.send action: 'theaction', payload: 'payload', dest: 'receiver3'
-		teardown client1
-
-	client1.connect()
-	client2.connect()
-
 
 
 test 'client sends an action and receives a response', (assert) ->
+	# Test data
 	expectedResponse = { statusCode: 'OK', data: 'somedata' }
+	actionToSend =
+		action: 'theaction'
+		payload: 'payload'
+		dest: 'receiver1'
 
-	client1 = setup 'sender4'
-	client2 = setup 'receiver4'
+	# Setting up clients
+	sender = setup 'sender1'
+	receiver = forkClient 'receiver1'
 
-	client2.once 'connected', ->
-		client2.on 'theaction', (payload, reply) ->
-			reply.send { type: 'success', data: 'somedata' }
+	# Start test
+	###
+		message is used first to check that the the receiver is connected,
+		only after it happens, the sender can connect. In this it is
+		possible to simulate an interaction between a device (receiver)
+		and server (sender).
+		The second message should contain the payload that the receiver
+		received and the ack of the response it sent back.
+	###
+	receiver.on 'message', (message) ->
+		if message is 'connected'
+			sender.connect()
+		else
+			{ receivedPayload, ack } = message
+			assert.equal receivedPayload, actionToSend.payload,
+				"The payload should be equal to the sent payload: `#{actionToSend.payload}`"
+			assert.equal ack, 'OK',
+				'If the receiver published a response correctly, the ack should be `OK`'
 
-		client2.listenToActionsAndResults()
-
-	client1.once 'connected', ->
-		client1.send({
-				action: 'theaction'
-				payload: 'payload'
-				dest: 'receiver4'
-			}
-		, (error, ack, listener) ->
-				listener.once 'result', (response) ->
-					assert.deepEqual response, expectedResponse,
-						"The response should be equal to #{JSON.stringify expectedResponse}"
-					teardown client2, ->
-						teardown client1, ->
-							assert.end()
-
-				client1.listenToActionsAndResults()
+	sender.once 'connected', (socket) ->
+		socket.send(
+			actionToSend
+		, (response) ->
+				assert.deepEqual response, expectedResponse,
+					"The response should be equal to #{JSON.stringify expectedResponse}"
+				teardownForkedClient receiver
+				teardown sender
+				assert.end()
+		, (error, ack) ->
+				assert.equal ack, 'OK',
+					'If the sender published an action correctly, the ack should be `OK`'
 		)
 
-	client1.connect()
-	client2.connect()
 
-
-
-test 'client sends an action, but the receiver is offline', (assert) ->
+test 'client sends an action, but the receiver goes offline and then up again', (assert) ->
+	# Test data
 	expectedResponse = { statusCode: 'OK', data: 'somedata' }
+	actionToSend =
+		action: 'theaction'
+		payload: 'payload'
+		dest: 'receiver2'
 
-	client1 = setup 'sender5'
-	client2 = setup 'receiver5'
-	receiverTimeout = null
-	senderTimeout = null
+	# Setting up clients
+	sender = setup 'sender2'
+	receiver = forkClient 'receiver2'
 
-	client2.once 'connected', ->
-		client2.listenToActionsAndResults()
-		assert.comment 'The receiver will go down and then up again in 2 seconds...'
+	# Start test
+	###
+		message is used first to check that the the receiver is connected,
+		only after it happens, the sender can connect. In this it is
+		possible to simulate an interaction between a device (receiver)
+		and server (sender).
+		The second message should contain the payload that the receiver
+		received and the ack of the response it sent back.
+	###
+	receiver.on 'message', (message) ->
+		if message is 'connected'
+			sender.connect()
+			assert.comment "Putting receiver2 down..."
+			teardownForkedClient receiver
 
-		receiverTimeout = setTimeout ->
-			teardown client2
-			client2 = setup 'receiver5'
-			client2.once 'connected', ->
-				client2.on 'theaction', (payload, reply) ->
-					reply.send { type: 'success', data: 'somedata' }
+			# Recreate the receiver after some time
+			timeout = 5000
+			assert.comment "Restarting receiver2 in #{timeout / 1000} s"
+			setTimeout ->
+				receiver = forkClient 'receiver2'
+			, timeout
+		else
+			{ receivedPayload, ack } = message
+			assert.equal receivedPayload, actionToSend.payload,
+				"The payload should be equal to the sent payload: #{actionToSend.payload}"
+			assert.equal ack, 'OK',
+				'If the receiver published a response correctly, the ack should be OK'
 
-				client2.listenToActionsAndResults()
-			client2.connect()
-		, 2000
+	sender.on 'connected', (socket) ->
+		socket.send(
+			actionToSend
+		, (response) ->
+				assert.deepEqual response, expectedResponse,
+					"The response should be equal to #{JSON.stringify expectedResponse}"
+				teardownForkedClient receiver
+				teardown sender
+				assert.end()
+		, (error, ack) ->
+				assert.equal ack, 'OK',
+					'If the sender published an action correctly, the ack should be `OK`'
+		)
 
-	client2.connect()
 
-	assert.comment 'The sender will send in 6 seconds...'
-	senderTimeout = setTimeout ->
+test.only 'the sender send an action and it goes offline', (assert) ->
+	# Test data
+	expectedResponse = { action: 'theaction', statusCode: 'OK', data: 'somedata' }
+	actionToSend =
+		action: 'theaction'
+		payload: 'payload'
+		dest: 'receiver3'
 
-		client1.once 'connected', ->
-			client1.send({
-					action: 'theaction'
-					payload: 'payload'
-					dest: 'receiver5'
-				},
+	# Setting up clients
+	sender = setup 'sender3'
+	receiver = forkClient 'receiver3'
 
-				(error, ack, listener) ->
-					listener.on 'result', (response) ->
-						assert.deepEqual response, expectedResponse,
-							"The response should be equal to #{JSON.stringify expectedResponse}"
-						teardown client2, ->
-							teardown client1, ->
-								clearTimeout receiverTimeout
-								clearTimeout senderTimeout
+	# Start test
+	###
+		message is used first to check that the the receiver is connected,
+		only after it happens, the sender can connect. In this it is
+		possible to simulate an interaction between a device (receiver)
+		and server (sender).
+		The second message should contain the payload that the receiver
+		received and the ack of the response it sent back.
+	###
+	receiver.on 'message', (message) ->
+		if message is 'connected'
+			sender.connect()
+		else
+			{ receivedPayload, ack } = message
+			assert.equal receivedPayload, actionToSend.payload,
+				"The payload should be equal to the sent payload: #{actionToSend.payload}"
+			assert.equal ack, 'OK',
+				'If the receiver published a response correctly, the ack should be OK'
+
+	sender.once 'connected', (socket) ->
+		socket.send(
+			actionToSend
+		, (response) ->
+				return
+		, (error, ack) ->
+				assert.equal ack, 'OK',
+					'If the sender published an action correctly, the ack should be `OK`'
+
+				assert.comment "Tearing down sender3..."
+				teardown sender, ->
+					# Recreate the sender after some time
+					timeout = 5000
+					assert.comment "Restarting sender3 in #{timeout / 1000} s"
+					setTimeout ->
+						sender = setup 'sender3'
+						sender.once 'connected', (socket) ->
+							socket.on 'response', (response) ->
+								assert.deepEqual response, expectedResponse,
+									"The response should be equal to #{JSON.stringify expectedResponse}"
+								teardownForkedClient receiver
+								teardown sender
 								assert.end()
 
-					client1.listenToActionsAndResults()
-			)
-
-		client1.connect()
-	, 6000
+						sender.connect()
+					, timeout
+		)
