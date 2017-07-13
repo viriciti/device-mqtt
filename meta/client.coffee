@@ -9,7 +9,7 @@ process.on 'message', (config) ->
 		console.log "Forked client: #{config.clientId} connected!"
 		process.send 'connected'
 
-		socket.on 'theaction', (payload, reply) ->
+		socket.on 'action:theaction', (payload, reply) ->
 			reply.send { type: 'success', data: 'somedata' }, (error, ack) ->
 				process.send { receivedPayload: payload, ack: ack }
 
