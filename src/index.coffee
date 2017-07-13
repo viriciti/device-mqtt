@@ -7,15 +7,19 @@ QOS        = 2
 
 class Emitter extends EventEmitter
 
-module.exports = ({ host, port, clientId }) ->
-	throw new Error 'ClientId must be provided!' unless clientId
+module.exports = ({ host, port, clientId }, mqttInstance) ->
+	if !!mqttInstance
+		throw new Error 'ClientId must be provided!' unless clientId
 
 	_client = new Emitter
 	_socket = new Emitter
 	_mqtt = null
 
 	connect = ->
-		_mqtt = mqtt.connect "mqtt://#{host}:#{port}", { clientId, clean: false }
+		if mqttInstance
+			_mqtt = mqttInstance
+		else
+			_mqtt = mqtt.connect "mqtt://#{host}:#{port}", { clientId, clean: false }
 
 		_mqtt.on 'error', (error) ->
 			_client.emit 'error', error
@@ -43,7 +47,6 @@ module.exports = ({ host, port, clientId }) ->
 
 
 	destroy = (cb) ->
-		_mqtt.removeListener 'message', _messageHandler
 		_mqtt.end cb
 
 
@@ -62,10 +65,9 @@ module.exports = ({ host, port, clientId }) ->
 		)
 
 	_startListeningToMessages = ->
-		_mqtt.on 'message', _messageHandler
+		_mqtt.on 'message', (topic, message) ->
+			_socket.emit 'message', topic, message
 
-	_messageHandler = (topic, message) ->
-		_socket.emit 'message', topic, message
 
 	_createSocket = ->
 		api_commands = require './api_commands'
@@ -74,7 +76,14 @@ module.exports = ({ host, port, clientId }) ->
 			socket: _socket
 			socketId: clientId
 
+		api_crud = require './api_crud'
+		{ createCollection } = api_crud
+			mqttInstance: _mqtt
+			socket: _socket
+			socketId: clientId
+
 		_socket.send = send
+		_socket.createCollection = createCollection
 		_socket
 
 
