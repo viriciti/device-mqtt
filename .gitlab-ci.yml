@@ -1,19 +1,19 @@
 stages:
-  - test
+  # - test
   - build
   - release
 
-test:
-  stage: test
-  image: docker.viriciti.com/building-tools/project-compiler
-  services:
-    - toke/mosquitto
-  script:
-    - npm install --production
-    - ln -s /usr/local/lib/node_modules/tape node_modules/tape
-    - npm test
-  only:
-    - tags
+# test:
+#   stage: test
+#   image: docker.viriciti.com/building-tools/project-compiler
+#   services:
+#     - toke/mosquitto
+#   script:
+#     - npm install --production
+#     - ln -s /usr/local/lib/node_modules/tape node_modules/tape
+#     - npm test
+#   only:
+#     - tags
 
 build:
   stage: build
