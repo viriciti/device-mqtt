@@ -35,7 +35,6 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 	_createCollectionObject = (singleObjCollTopic, localState) ->
 		collectionObj = {}
 
-		# TODO check element existence
 		# Create methods for collectionObj
 		# ADD
 		collectionObj.add = ({ key, value }, done) ->

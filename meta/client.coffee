@@ -13,4 +13,9 @@ process.on 'message', (config) ->
 			reply.send { type: 'success', data: 'somedata' }, (error, ack) ->
 				process.send { receivedPayload: payload, ack: ack }
 
+		socket.on 'action:theaction2', (payload, reply) ->
+			console.log payload
+			reply.send { type: 'error', data: 'somedata' }, (error, ack) ->
+				process.send { receivedPayload: payload, ack: ack }
+
 	client.connect()
