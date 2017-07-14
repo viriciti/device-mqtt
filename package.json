@@ -1,5 +1,5 @@
 {
-  "name": "device-mqtt",
+  "name": "@tn-group/device-mqtt",
   "version": "1.0.0",
   "main": "build/index.js",
   "scripts": {
