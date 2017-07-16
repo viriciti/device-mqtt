@@ -8,7 +8,7 @@ test       = require 'tape'
 devicemqtt = require '../src/device-mqtt'
 
 config =
-	host: 'localhost'
+	host: 'toke-mosquitto'
 	port: 1883
 	clientId: 'integrationTest'
 
