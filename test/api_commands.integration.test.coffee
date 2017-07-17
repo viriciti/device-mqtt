@@ -11,14 +11,14 @@ devicemqtt = require '../src/index'
 { fork }   = require "child_process"
 
 # Only for pipeline tests
-config =
-	host: 'toke-mosquitto'
-	port: 1883
+# config =
+# 	host: 'toke-mosquitto'
+# 	port: 1883
 
 # Only for development
-# config =
-# 	host: 'localhost'
-# 	port: 7654
+config =
+	host: 'localhost'
+	port: 7654
 
 
 ### Testing template

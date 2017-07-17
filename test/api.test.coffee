@@ -1,13 +1,13 @@
 test   = require 'tape'
 devicemqtt = require '../src/index'
 
-config =
-	host: 'toke-mosquitto'
-	port: 1883
-
 # config =
-# 	host: 'localhost'
-# 	port: 7654
+# 	host: 'toke-mosquitto'
+# 	port: 1883
+
+config =
+	host: 'localhost'
+	port: 7654
 
 ### Testing template
 
@@ -45,11 +45,18 @@ test 'constructor', (assert) ->
 			'the constructor should throw an error if no clientId value is provided.'
 	)
 
+	assert.comment 'Test: clientId has presents `/`'
+	assert.throws (() ->
+		client = devicemqtt Object.assign({}, config, { clientId: 'client/client2' }),
+			'the constructor should throw an error.'
+	)
+
 	assert.comment 'Test: clientId passed to the constructor'
 	assert.doesNotThrow (() ->
 		client = devicemqtt Object.assign({}, config, { clientId: 'client' }),
 			'the constructor should not throw an error.'
 	)
+
 
 	assert.end()
 

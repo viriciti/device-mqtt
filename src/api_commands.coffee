@@ -5,8 +5,8 @@ QOS               = 2
 MAIN_TOPIC        = 'device-mqtt'
 RESPONSE_SUBTOPIC = 'response'
 ACTIONID_POSITION = 2
-RESPONSE_REGEXP   = new RegExp "^#{MAIN_TOPIC}\/([a-zA-Z0-9])+\/([a-zA-Z0-9])+\/#{RESPONSE_SUBTOPIC}"
-ACTION_REGEXP     = new RegExp "^#{MAIN_TOPIC}\/([a-zA-Z0-9])+\/([a-zA-Z0-9])+"
+RESPONSE_REGEXP   = new RegExp "^#{MAIN_TOPIC}\/(.)+\/([a-zA-Z0-9])+\/#{RESPONSE_SUBTOPIC}"
+ACTION_REGEXP     = new RegExp "^#{MAIN_TOPIC}\/(.)+\/([a-zA-Z0-9])+"
 
 class Emitter extends EventEmitter
 
