@@ -17,7 +17,7 @@ test:
 
 build:
   stage: build
-  image: docker.viriciti.com/vems/project-compiler
+  image: docker.viriciti.com/building-tools/project-compiler
   artifacts:
     paths:
       - build
