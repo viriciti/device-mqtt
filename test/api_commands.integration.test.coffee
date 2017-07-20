@@ -211,3 +211,56 @@ test 'the sender send an action and it goes offline', (assert) ->
 						sender.connect()
 					, timeout
 		)
+
+
+test.only 'sender sends an action, disconnects and sends another action', (assert) ->
+	# Test data
+	expectedResponse = { statusCode: 'OK', data: 'somedata' }
+	actionToSend =
+		action: 'theaction'
+		payload: 'payload'
+		dest: 'receiver4'
+
+	# Setting up clients
+	sender = setup 'sender4'
+	receiver = forkClient 'receiver4'
+
+	# Start test
+	###
+		message is used first to check that the the receiver is connected,
+		only after it happens, the sender can connect. In this it is
+		possible to simulate an interaction between a device (receiver)
+		and server (sender).
+		The second message should contain the payload that the receiver
+		received and the ack of the response it sent back.
+	###
+	receiver.on 'message', (message) ->
+		if message is 'connected'
+			sender.connect()
+
+	sender.once 'connected', (socket) ->
+		assert.comment 'Sending first action...'
+		socket.send(
+			actionToSend
+		, (response) ->
+				assert.deepEqual response, expectedResponse,
+					"The response should be equal to #{JSON.stringify expectedResponse}"
+				teardown sender
+
+				setTimeout ->
+					assert.comment 'Sending second action...'
+					sender = setup 'sender4'
+					sender.once 'connected', (socket) ->
+						socket.send(
+							actionToSend
+						, (response) ->
+								assert.deepEqual response, expectedResponse,
+									"The response should be equal to #{JSON.stringify expectedResponse}"
+								teardown sender
+								teardownForkedClient receiver
+								assert.end()
+						)
+
+					sender.connect()
+				, 1000
+		)

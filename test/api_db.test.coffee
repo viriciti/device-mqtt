@@ -1,4 +1,4 @@
-test   = require 'tape'
+test       = require 'tape'
 devicemqtt = require '../src/index'
 
 # config =
@@ -22,7 +22,6 @@ test 'What component aspect are you testing?', (assert) ->
 ###############################################################
 
 setup = (clientId)->
-	client = null
 	client = devicemqtt Object.assign({}, config, { clientId })
 	return client
 
@@ -64,11 +63,15 @@ test 'The client creates a new collection', (assert) ->
 
 
 test 'The client saves items, delete one and updates the other', (assert) ->
+
 	client = setup 'client_api_db'
 	testobject = {}
-	testObjectAfterAdd = { key: 'value', key1: 'value1', key2: 'value2' }
-	testObjectAfterRemove = { key: 'value', key2: 'value2' }
-	testObjectAfterUpdate = { key: 'updatedvalue', key2: 'value2' }
+	testObjectAfterAdd =
+		key: 'value'
+		key1: justAnObject: 'value1'
+		key2: 'value2'
+	testObjectAfterRemove = key: 'value', key2: 'value2'
+	testObjectAfterUpdate = key: 'updatedvalue', key2: 'value2'
 
 	client.once 'connected', (socket) ->
 		socket.createCollection(
@@ -81,7 +84,7 @@ test 'The client saves items, delete one and updates the other', (assert) ->
 					assert.equal ack, 'OK',
 						'should return `OK` if the item is added correctly'
 
-					collection.add { key: 'key1', value: 'value1' }, (ack) ->
+					collection.add { key: 'key1', value: { justAnObject: 'value1' } }, (ack) ->
 						assert.equal ack, 'OK',
 							'should return `OK` if the item is added correctly'
 
@@ -184,7 +187,7 @@ test 'The client saves an item & gets it from the local state', (assert) ->
 		,	testobject
 		,
 			(collection) ->
-				assert.comment 'Adding two items...'
+				assert.comment 'Adding one item...'
 				collection.add { key: 'key', value: 'value' }, (ack) ->
 					assert.equal ack, 'OK',
 						'should return `OK` if the item is added correctly'
@@ -201,11 +204,84 @@ test 'The client saves an item & gets it from the local state', (assert) ->
 	client.connect()
 
 
-# Only for local development for now (needs to be restarted twice)
+test 'REMINDER!!!!!!', (assert) ->
+	assert.comment 'RUN THE NEXT 3 STEP ONE BY ONE, RESTARTING THE BROKER EACH TIME'
+	assert.end()
+
+# # For this test the broker needs to be restarted.
+# test 'Retrieve single item of a collection', (assert) ->
+# 	client = setup 'client_api_db_retrieve_item'
+# 	collectionName = 'testcollection'
+# 	testobject = {}
+# 	receivedCollection = 'value'
+#
+# 	client.once 'connected', (socket) ->
+# 		socket.createCollection(
+# 			collectionName
+# 		,	testobject
+# 		,
+# 			(collection) ->
+# 				assert.comment 'Adding one item...'
+# 				collection.add { key: 'key', value: 'value' }, (ack) ->
+# 					teardown client
+#
+# 					client = setup 'client_api_db_retrieve_item'
+# 					client.once 'connected', (socket) ->
+# 						console.log 'connected'
+# 						socket.on "collection:#{collectionName}", (collection) ->
+# 							assert.equal receivedCollection, collection
+# 							teardown client
+# 							assert.end()
+#
+# 					assert.comment 'Reconnecting in 5 seconds... \n\n'
+# 					setTimeout ->
+# 						client.connect()
+# 					, 5000
+# 		)
+#
+# 	client.connect()
+#
+# # For this test the broker needs to be restarted.
+# test 'Retrieve full collection object', (assert) ->
+# 	client = setup 'client_api_db_retrieve_object'
+# 	collectionName = 'testcollection'
+# 	testobject = {}
+# 	receivedCollection = { key: 'value', key1: { test: 'test' } }
+#
+# 	client.once 'connected', (socket) ->
+# 		socket.createCollection(
+# 			collectionName
+# 		,	testobject
+# 		,
+# 			(collection) ->
+# 				assert.comment 'Adding one item...'
+# 				collection.add { key: 'key', value: 'value' }, (ack) ->
+# 					collection.add { key: 'key1', value: { test: 'test' } }, (ack) ->
+# 						teardown client
+#
+# 						client = setup 'client_api_db_retrieve_object'
+# 						client.once 'connected', (socket) ->
+# 							console.log 'connected'
+# 							socket.on "collection", (collName, collection) ->
+# 								assert.equal collName, collectionName
+# 								assert.deepEqual receivedCollection, collection
+# 								teardown client
+# 								assert.end()
+#
+# 						assert.comment 'Reconnecting in 5 seconds... \n\n'
+# 						setTimeout ->
+# 							client.connect()
+# 						, 5000
+# 		)
+#
+# 	client.connect()
+#
+#
+# # For this test the broker needs to be restarted.
 # test 'The client saves an item and receives the new config object', (assert) ->
 # 	client = setup 'client_api_db_event1'
 # 	testobject = {}
-# 	testObjectAfterAdd = { key: 'value' }
+# 	testObjectAfterAdd = { config: 'config' }
 #
 # 	client.once 'connected', (socket) ->
 # 		socket.on 'collection:testcollection', (collection) ->
@@ -220,8 +296,8 @@ test 'The client saves an item & gets it from the local state', (assert) ->
 # 		,	testobject
 # 		,
 # 			(collection) ->
-# 				assert.comment 'Adding two items...'
-# 				collection.add { key: 'key', value: 'value' }, (ack) ->
+# 				assert.comment 'Adding one item...'
+# 				collection.add { key: 'key', value: config: 'config' }, (ack) ->
 # 					assert.equal ack, 'OK',
 # 						'should return `OK` if the item is added correctly'
 # 		,
