@@ -1,15 +1,18 @@
 EventEmitter = require 'events'
 randomstring = require 'randomstring'
+isJson       = require 'is-json'
 
 QOS = 2
 COLLECTIONS_TOPIC = 'collections'
 COLLECTION_POSITION = 2
+
 
 class Emitter extends EventEmitter
 
 module.exports = ({ mqttInstance, socket, socketId }) ->
 	throw new Error 'No mqtt connection provided!' unless mqttInstance
 	throw new Error 'ClientId must be provided!' unless socketId
+	DB_REGEX = new RegExp "^#{socketId}\/collections\/(.)+$"
 
 	_mqtt = mqttInstance
 	_socket = socket
@@ -23,11 +26,13 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 			singleItemsCollTopic
 		]
 
-		_mqtt.subscribe collectionTopics, { qos: QOS }, (error) ->
-			return _socket.emit 'error', error if error
-			cb? 'OK'
+		if localState?
+			return _mqtt.subscribe collectionTopics, { qos: QOS }, (error) ->
+				return _socket.emit 'error', error if error
+				cb? 'OK'
+				collectionObjCb(_createCollectionObject singleObjCollTopic, localState)
 
-			collectionObjCb(_createCollectionObject singleObjCollTopic, localState)
+		collectionObjCb(_createCollectionObject singleObjCollTopic, localState)
 
 
 
@@ -38,7 +43,12 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 		# Create methods for collectionObj
 		# ADD
 		collectionObj.add = ({ key, value }, done) ->
+			if localState[key]
+				return _socket.emit 'error',
+					new Error "Key `#{key}` already existent!"
+
 			localState[key] = value
+			value = JSON.stringify value if _isJson value
 
 			_updateCollectionObject singleObjCollTopic, localState, ->
 				_mqtt.publish "#{singleObjCollTopic}/#{key}",
@@ -71,6 +81,7 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 					new Error "Cannot update key `#{key}`: not existent!"
 
 			localState[key] = value
+			value = JSON.stringify value if _isJson value
 
 			_updateCollectionObject singleObjCollTopic, localState, ->
 				_mqtt.publish "#{singleObjCollTopic}/#{key}",
@@ -83,9 +94,14 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 
 		# GET
 		collectionObj.get = (key) ->
+			return null if not localState[key]
+			return JSON.parse localState[key] if isJson localState[key]
 			return localState[key]
 
 		return collectionObj
+
+	_isJson = (object) ->
+		return isJson object, [passObjects=true]
 
 
 	_updateCollectionObject = (singleObjCollTopic, localState, cb) ->
@@ -97,19 +113,23 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 				cb()
 
 
-	_messageHandler = (topic, message) ->
-		dbRegex = new RegExp "^#{socketId}\/collections\/([a-zA-Z0-9])+$"
-		topic = topic.toString()
+	handleMessage = (topic, message) ->
+		singleItemCollTopicRegex = new RegExp "^#{socketId}\/collections\/(.)+\/(.)+$"
+		collectionName = _extractCollectionName topic
 
-		if dbRegex.test topic
-			message = JSON.parse message.toString()
-			collectionName = _extractCollectionName topic
-			_socket.emit 'collection', collectionName, message
+		if singleItemCollTopicRegex.test topic
+			message = JSON.parse message if isJson message
 			_socket.emit "collection:#{collectionName}", message
+		else
+			message = JSON.parse message
+			_socket.emit 'collection', collectionName, message
+
 
 	_extractCollectionName = (topic) ->
 		(topic.split '/')[COLLECTION_POSITION]
 
-
-	_socket.on 'message', _messageHandler
-	return { createCollection }
+	return {
+		createCollection
+		handleMessage
+		dbRegex: DB_REGEX
+	}
