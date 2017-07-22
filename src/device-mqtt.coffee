@@ -11,6 +11,8 @@ RESPONSE_POSITION = 3
 class Emitter extends EventEmitter
 
 module.exports = ({ host, port, clientId }) ->
+	throw new Error 'ClientId must be provided!' if !clientId
+
 	_client = new Emitter
 	_mqtt   = null
 	_prevMessage = null
@@ -19,40 +21,42 @@ module.exports = ({ host, port, clientId }) ->
 	connect = ->
 		_mqtt = mqtt.connect "mqtt://#{host}:#{port}", { clientId, clean: false }
 
-		_mqtt.once 'connect', ->
-			_client.emit 'connected'
-
 		_mqtt.on 'error', (error) ->
-			console.log error.message
+			_client.emit 'error', error
 
+		_mqtt.once 'connect', ->
+			_startListening ->
+				_client.emit 'connected'
 
-	listenToActionsAndResults = ->
-		_startListening()
+		_mqtt.on 'reconnecting', ->
+			_client.emit 'reconnecting'
+
+		_mqtt.once 'close', ->
+			_client.emit 'disconnected'
 
 
 	send = (message, cb) ->
 		{ action, dest, payload } = message
 		throw new Error 'No action provided!' if !action
 		throw new Error 'No dest provided!' if !dest
+		throw new Error 'Action must be a string' if typeof message.action isnt 'string'
+		throw new Error 'Dest must be a string' if typeof message.dest isnt 'string'
 
 		actionMessage = JSON.stringify { action, payload, origin: clientId }
 
 		actionId = randomstring.generate()
 		topic    = _generatePubTopic actionId, message.dest
 
-		console.log clientId
-		console.log topic
-		console.log actionMessage
-
 		_mqtt.publish topic, actionMessage, { qos: QOS }, (error) ->
 			return cb? error if error
 
 			topic = _generateResponseTopic actionId, clientId
-			_mqtt.subscribe topic, qos: QOS
+			_mqtt.subscribe topic, qos: QOS, (error, granted) ->
+				return _client.emit 'error', error if error
 
-			responseListener = new Emitter
-			_actionListeners[actionId] = responseListener
-			cb? null, 'OK', responseListener
+				responseListener = new Emitter
+				_actionListeners[actionId] = responseListener
+				cb? null, 'OK', responseListener
 
 
 	destroy = (cb) ->
@@ -66,9 +70,17 @@ module.exports = ({ host, port, clientId }) ->
 		"#{MAIN_TOPIC}/#{dest}/#{actionId}"
 
 
-	_startListening = ->
+	_startListening = (cb) ->
 		_mqtt.on 'message', _messageHandler
-		_mqtt.subscribe "#{MAIN_TOPIC}/#{clientId}/+", qos: QOS
+		_mqtt.subscribe(
+			"#{MAIN_TOPIC}/#{clientId}/+",
+			{ qos: QOS },
+			(error, granted) ->
+				if error
+					errorMsg = "Error subscribing to actions topic. Reason: #{error.message}"
+					throw new Error errorMsg
+				cb()
+		)
 
 
 	_messageHandler = (topic, message) ->
@@ -89,10 +101,9 @@ module.exports = ({ host, port, clientId }) ->
 		{ statusCode, data } = JSON.parse message.toString()
 		actionId = _extractActionId topic
 
-		_actionListeners[actionId].emit 'result', { statusCode, data }
-
 		_mqtt.unsubscribe topic, ->
 			delete _actionListeners.actionId
+			_actionListeners[actionId].emit 'result', { statusCode, data }
 
 
 	_extractActionId = (topic) ->
@@ -135,7 +146,6 @@ module.exports = ({ host, port, clientId }) ->
 		_client.connect = connect
 		_client.destroy = destroy
 		_client.send = send
-		_client.listenToActionsAndResults = listenToActionsAndResults
 		return _client
 
 	return _createClient()
