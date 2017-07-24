@@ -35,7 +35,7 @@ test 'What component aspect are you testing?', (assert) ->
 
 setup = (clientId) ->
 	client = null
-	client = devicemqtt Object.assign({}, config, { clientId })
+	client = devicemqtt(Object.assign {}, config, { clientId })
 	return client
 
 forkClient = (clientId) ->
@@ -213,7 +213,7 @@ test 'the sender send an action and it goes offline', (assert) ->
 		)
 
 
-test.only 'sender sends an action, disconnects and sends another action', (assert) ->
+test 'sender sends an action, disconnects and sends another action', (assert) ->
 	# Test data
 	expectedResponse = { statusCode: 'OK', data: 'somedata' }
 	actionToSend =
