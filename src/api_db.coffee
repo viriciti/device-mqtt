@@ -17,21 +17,8 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 	_mqtt = mqttInstance
 	_socket = socket
 
-	createCollection = (collectionName, localState, collectionObjCb, cb) ->
+	createCollection = (collectionName, localState, collectionObjCb) ->
 		singleObjCollTopic = "#{socketId}/#{COLLECTIONS_TOPIC}/#{collectionName}"
-		singleItemsCollTopic = "#{socketId}/#{COLLECTIONS_TOPIC}/#{collectionName}/+"
-
-		collectionTopics = [
-			singleObjCollTopic
-			singleItemsCollTopic
-		]
-
-		if localState?
-			return _mqtt.subscribe collectionTopics, { qos: QOS }, (error) ->
-				return _socket.emit 'error', error if error
-				cb? 'OK'
-				collectionObjCb(_createCollectionObject singleObjCollTopic, localState)
-
 		collectionObjCb(_createCollectionObject singleObjCollTopic, localState)
 
 
@@ -44,25 +31,23 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 		# ADD
 		collectionObj.add = ({ key, value }, done) ->
 			if localState[key]
-				return _socket.emit 'error',
-					new Error "Key `#{key}` already existent!"
+				return done new Error "Key `#{key}` already existent!"
 
 			localState[key] = value
-			value = JSON.stringify value if _isJson value
+			value = JSON.stringify value if (_isJson value) || (Array.isArray value)
 
 			_updateCollectionObject singleObjCollTopic, localState, ->
 				_mqtt.publish "#{singleObjCollTopic}/#{key}",
 				value,
 				{ qos: QOS, retain: true },
 				(error) ->
-					return _socket.emit 'error', error if error
-					done 'OK'
+					return done error if error
+					done()
 
 		# REMOVE
 		collectionObj.remove = (key, done) ->
 			if !localState[key]
-				return _socket.emit 'error',
-					new Error "Cannot remove key `#{key}`: not existent!"
+				return done new Error "Cannot remove key `#{key}`: not existent!"
 
 			delete localState[key]
 
@@ -71,25 +56,24 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 				null,
 				{ qos: QOS, retain: true },
 				(error) ->
-					return _socket.emit 'error', error if error
-					done 'OK'
+					return done error if error
+					done()
 
 		# UPDATE
 		collectionObj.update = ({ key, value }, done) ->
 			if !localState[key]
-				return _socket.emit 'error',
-					new Error "Cannot update key `#{key}`: not existent!"
+				return done new Error "Cannot update key `#{key}`: not existent!"
 
 			localState[key] = value
-			value = JSON.stringify value if _isJson value
+			value = JSON.stringify value if (_isJson value) || (Array.isArray value)
 
 			_updateCollectionObject singleObjCollTopic, localState, ->
 				_mqtt.publish "#{singleObjCollTopic}/#{key}",
 				value,
 				{ qos: QOS, retain: true },
 				(error) ->
-					return _socket.emit 'error', error if error
-					done 'OK'
+					return done 'error', error if error
+					done()
 
 
 		# GET
@@ -98,7 +82,14 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 			return JSON.parse localState[key] if isJson localState[key]
 			return localState[key]
 
+		# GET ALL
+		collectionObj.getAll = ->
+			return localState
+
 		return collectionObj
+
+
+
 
 	_isJson = (object) ->
 		return isJson object, [passObjects=true]
@@ -109,7 +100,7 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 			JSON.stringify(localState),
 			{ qos: QOS, retain: true },
 			(error) ->
-				return _socket.emit 'error', error if error
+				return done error if error
 				cb()
 
 
