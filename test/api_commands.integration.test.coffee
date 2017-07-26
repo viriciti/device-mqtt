@@ -153,7 +153,7 @@ test 'client sends an action, but the receiver goes offline and then up again', 
 		)
 
 
-test.only 'the sender send an action and it goes offline', (assert) ->
+test 'the sender send an action and it goes offline', (assert) ->
 	# Test data
 	expectedResponse = { action: 'theaction', statusCode: 'OK', data: 'somedata' }
 	actionToSend =
