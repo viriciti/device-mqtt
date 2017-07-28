@@ -5,7 +5,8 @@ QOS               = 2
 MAIN_TOPIC        = 'device-mqtt'
 RESPONSE_SUBTOPIC = 'response'
 ACTIONID_POSITION = 2
-RESPONSE_POSITION = 3
+RESPONSE_REGEXP   = new RegExp "^#{MAIN_TOPIC}\/([a-zA-Z0-9])+\/([a-zA-Z0-9])+\/#{RESPONSE_SUBTOPIC}"
+ACTION_REGEXP     = new RegExp "^#{MAIN_TOPIC}\/([a-zA-Z0-9])+\/([a-zA-Z0-9])+"
 
 class Emitter extends EventEmitter
 
@@ -43,10 +44,13 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 
 
 	_messageHandler = (topic, message) ->
-		if (topic.toString().split '/')[RESPONSE_POSITION]
+		topic = topic.toString()
+
+		if RESPONSE_REGEXP.test topic
 			return _handleIncomingResults topic, message
 
-		_handleIncomingActions topic, message
+		if ACTION_REGEXP.test topic
+			return _handleIncomingActions topic, message
 
 
 	_handleIncomingActions = (topic, message) ->
@@ -56,7 +60,7 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 		reply = _generateReplyObject origin, actionId, action
 
 		_socket.emit "action", action, payload, reply
-		_socket.emit "#{action}", payload, reply
+		_socket.emit "action:#{action}", payload, reply
 
 
 	_handleIncomingResults = (topic, message) ->
