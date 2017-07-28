@@ -18,7 +18,8 @@
     "debug": "^2.6.8",
     "is-json": "^2.0.1",
     "mqtt": "^2.9.2",
-    "randomstring": "^1.1.5"
+    "randomstring": "^1.1.5",
+    "underscore": "^1.8.3"
   },
   "devDependencies": {
     "coffeetape": "^1.0.1",

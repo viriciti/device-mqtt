@@ -18,7 +18,7 @@ devicemqtt = require '../src/index'
 # Only for development
 config =
 	host: 'localhost'
-	port: 7654
+	port: 1883
 
 
 ### Testing template

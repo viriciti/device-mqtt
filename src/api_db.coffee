@@ -37,7 +37,7 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 			value = JSON.stringify value if (_isJson value) || (Array.isArray value)
 
 			_updateCollectionObject singleObjCollTopic, localState, ->
-				_mqtt.publish "#{singleObjCollTopic}/#{key}",
+				_mqtt.pub "#{singleObjCollTopic}/#{key}",
 				value,
 				{ qos: QOS, retain: true },
 				(error) ->
@@ -52,7 +52,7 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 			delete localState[key]
 
 			_updateCollectionObject singleObjCollTopic, localState, ->
-				_mqtt.publish "#{singleObjCollTopic}/#{key}",
+				_mqtt.pub "#{singleObjCollTopic}/#{key}",
 				null,
 				{ qos: QOS, retain: true },
 				(error) ->
@@ -68,7 +68,7 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 			value = JSON.stringify value if (_isJson value) || (Array.isArray value)
 
 			_updateCollectionObject singleObjCollTopic, localState, ->
-				_mqtt.publish "#{singleObjCollTopic}/#{key}",
+				_mqtt.pub "#{singleObjCollTopic}/#{key}",
 				value,
 				{ qos: QOS, retain: true },
 				(error) ->
@@ -96,7 +96,7 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 
 
 	_updateCollectionObject = (singleObjCollTopic, localState, cb) ->
-		_mqtt.publish singleObjCollTopic,
+		_mqtt.pub singleObjCollTopic,
 			JSON.stringify(localState),
 			{ qos: QOS, retain: true },
 			(error) ->

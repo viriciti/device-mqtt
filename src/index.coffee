@@ -4,10 +4,12 @@
 # 	debugSockets: true
 # }
 
-EventEmitter = require 'events'
-mqtt         = require 'mqtt'
+EventEmitter  = require 'events'
+mqtt          = require 'mqtt'
+MqttDecorator = require './MqttDecorator'
 
-MAIN_TOPIC        = 'device-mqtt'
+
+MAIN_TOPIC        = 'commands'
 COLLECTIONS_TOPIC = 'collections'
 QOS               = 2
 
@@ -43,6 +45,8 @@ module.exports = ({ host, port, clientId }) ->
 
 		_mqttUrl = "mqtt://#{host}:#{port}"
 		_mqtt = mqtt.connect _mqttUrl, connectionOptions
+		_mqtt = MqttDecorator _mqtt
+
 		_init _mqtt
 		_initApis _mqtt
 
@@ -52,9 +56,10 @@ module.exports = ({ host, port, clientId }) ->
 
 
 	customPublish = ({ topic, message, opts }, cb) ->
-		_mqtt.publish topic, message, opts, (error) ->
-			return cb error if error
-			cb()
+		_mqtt.publish topic, message, opts, cb
+
+	customSubscribe = ({ topic, opts }, cb) ->
+		_mqtt.subscribe topic, opts, cb
 
 
 
@@ -72,9 +77,10 @@ module.exports = ({ host, port, clientId }) ->
 			socketId: clientId
 		)
 
-	_subscribeFirstTime = (cb) ->
+
+	_subFirstTime = (cb) ->
 		_startListeningToMessages()
-		_mqtt.subscribe(
+		_mqtt.sub(
 			[ACTIONS_TOPIC, SINGLE_ITEM_DB_TOPIC, OBJECT_DB_TOPIC],
 			{ qos: QOS },
 			(error, granted) ->
@@ -84,8 +90,8 @@ module.exports = ({ host, port, clientId }) ->
 				cb()
 		)
 
-	_subscribeToDbTopics = (cb) ->
-		_mqtt.subscribe(
+	_subToDbTopics = (cb) ->
+		_mqtt.sub(
 			[SINGLE_ITEM_DB_TOPIC, OBJECT_DB_TOPIC],
 			{ qos: QOS },
 			(error, granted) ->
@@ -111,6 +117,8 @@ module.exports = ({ host, port, clientId }) ->
 			api_commands.handleMessage topic, message, 'action'
 		else if dbRegex.test topic
 			api_db.handleMessage topic, message
+		else
+			_socket.emit topic, message
 
 
 
@@ -121,6 +129,7 @@ module.exports = ({ host, port, clientId }) ->
 		_socket.send = send
 		_socket.createCollection = createCollection
 		_socket.customPublish = customPublish
+		_socket.customSubscribe = customSubscribe
 		_socket
 
 
@@ -130,7 +139,7 @@ module.exports = ({ host, port, clientId }) ->
 				The connack.sessionPresent is set to `true` if
 				the client has already a persistent session.
 				If the session is there, there is no need to
-				subscribe again to the topics.
+				sub again to the topics.
 			###
 			if connack.sessionPresent
 				###
@@ -138,12 +147,12 @@ module.exports = ({ host, port, clientId }) ->
 					even if there is a persistent session, the
 					retained messages are not received.
 				###
-				return _subscribeToDbTopics (error) ->
+				return _subToDbTopics (error) ->
 					return _client.emit 'error', error if error
 					_client.emit 'connected', _createSocket()
 					_startListeningToMessages()
 
-			_subscribeFirstTime (error) ->
+			_subFirstTime (error) ->
 				_client.emit 'error', error if error
 				_client.emit 'connected', _createSocket()
 

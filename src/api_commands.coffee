@@ -3,7 +3,7 @@ randomstring = require 'randomstring'
 debug        = (require 'debug') 'api_commands'
 
 QOS               = 2
-MAIN_TOPIC        = 'device-mqtt'
+MAIN_TOPIC        = 'commands'
 RESPONSE_SUBTOPIC = 'response'
 ACTIONID_POSITION = 2
 RESPONSE_REGEXP   = new RegExp "^#{MAIN_TOPIC}\/(.)+\/([a-zA-Z0-9])+\/#{RESPONSE_SUBTOPIC}"
@@ -33,16 +33,16 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 		topic    = _generatePubTopic actionId, message.dest
 
 		###
-			Is it important to subscribe to the response topic before sending the action,
+			Is it important to sub to the response topic before sending the action,
 			because there can be a race condition and the sender will never receives
 			the response.
 		###
 		responseTopic = _generateResponseTopic actionId, socketId
-		_mqtt.subscribe responseTopic, qos: QOS, (error, granted) ->
+		_mqtt.sub responseTopic, { qos: QOS }, (error, granted) ->
 			return _socket.emit 'error', error if error
 			_actionResultCallbacks[actionId] = resultCb
 
-			_mqtt.publish topic, actionMessage, { qos: QOS }, (error) ->
+			_mqtt.pub topic, actionMessage, { qos: QOS }, (error) ->
 				if error
 					_mqtt.unsubscribe responseTopic, (unsubscribeError) ->
 						return _socket.emit 'error', unsubscribeError if unsubscribeError
@@ -104,7 +104,7 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 		reply.send = ({ type, data }, cb) ->
 			responseMessage = _generateResponse { type, data, action }
 
-			_mqtt.publish(
+			_mqtt.pub(
 				_generateResponseTopic(actionId, origin),
 				responseMessage,
 				qos: QOS,
