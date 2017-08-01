@@ -5,6 +5,7 @@ isJson       = require 'is-json'
 QOS = 2
 COLLECTIONS_TOPIC = 'collections'
 COLLECTION_POSITION = 2
+GLOBAL_COLLECTION_POSITION = 2
 
 
 class Emitter extends EventEmitter
@@ -13,6 +14,7 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 	throw new Error 'No mqtt connection provided!' unless mqttInstance
 	throw new Error 'ClientId must be provided!' unless socketId
 	DB_REGEX = new RegExp "^#{socketId}\/collections\/(.)+$"
+	GLOBAL_REGEX = new RegExp "^global\/collections\/(.)+$"
 
 	_mqtt = mqttInstance
 	_socket = socket
@@ -20,6 +22,10 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 	createCollection = (collectionName, localState, collectionObjCb) ->
 		singleObjCollTopic = "#{socketId}/#{COLLECTIONS_TOPIC}/#{collectionName}"
 		collectionObjCb(_createCollectionObject singleObjCollTopic, localState)
+
+	createGlobalCollection = (collectionName, localState, collectionObjCb) ->
+		singleGlobalObjCollTopic = "global/collections/#{collectionName}"
+		collectionObjCb(_createCollectionObject singleGlobalObjCollTopic, localState)
 
 
 
@@ -104,7 +110,12 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 				cb()
 
 
-	handleMessage = (topic, message) ->
+	handleMessage = (topic, message, collectionType) ->
+		switch collectionType
+			when 'local'  then _handleLocalCollections topic, message
+			when 'global' then _handleGlobalCollections topic, message
+
+	_handleLocalCollections = (topic, message) ->
 		singleItemCollTopicRegex = new RegExp "^#{socketId}\/collections\/(.)+\/(.)+$"
 		collectionName = _extractCollectionName topic
 
@@ -115,12 +126,30 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 			message = JSON.parse message
 			_socket.emit 'collection', collectionName, message
 
+	_handleGlobalCollections = (topic, message) ->
+		globalSingleItemCollTopicRegex = new RegExp "^global\/collections\/(.)+\/(.)+$"
+		collectionName = _extractGlobalCollectionName topic
+
+		if globalSingleItemCollTopicRegex.test topic
+			message = JSON.parse message if isJson message
+			_socket.emit "global:collection:#{collectionName}", message
+		else
+			message = JSON.parse message
+			_socket.emit 'global:collection', collectionName, message
 
 	_extractCollectionName = (topic) ->
 		(topic.split '/')[COLLECTION_POSITION]
 
+	_extractGlobalCollectionName = (topic) ->
+		(topic.split '/')[GLOBAL_COLLECTION_POSITION]
+
+
+
+
 	return {
 		createCollection
+		createGlobalCollection
 		handleMessage
 		dbRegex: DB_REGEX
+		globalRegex: GLOBAL_REGEX
 	}
