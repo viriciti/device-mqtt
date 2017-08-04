@@ -7,7 +7,7 @@ devicemqtt = require '../src/index'
 
 config =
 	host: 'localhost'
-	port: 7654
+	port: 1883
 
 ### Testing template
 
@@ -23,7 +23,7 @@ test 'What component aspect are you testing?', (assert) ->
 
 setup = (clientId)->
 	client = null
-	client = devicemqtt Object.assign({}, config, { clientId })
+	client = devicemqtt(Object.assign {}, config, { clientId })
 	return client
 
 teardown = (client) ->

@@ -1,8 +1,9 @@
 EventEmitter = require 'events'
 randomstring = require 'randomstring'
+debug        = (require 'debug') 'api_commands'
 
 QOS               = 2
-MAIN_TOPIC        = 'device-mqtt'
+MAIN_TOPIC        = 'commands'
 RESPONSE_SUBTOPIC = 'response'
 ACTIONID_POSITION = 2
 RESPONSE_REGEXP   = new RegExp "^#{MAIN_TOPIC}\/(.)+\/([a-zA-Z0-9])+\/#{RESPONSE_SUBTOPIC}"
@@ -26,35 +27,48 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 		throw new Error 'Dest must be a string' if typeof message.dest isnt 'string'
 
 		actionMessage = JSON.stringify { action, payload, origin: socketId }
+		debug "Sending new message: #{actionMessage}"
 
 		actionId = randomstring.generate()
 		topic    = _generatePubTopic actionId, message.dest
 
-		_mqtt.publish topic, actionMessage, { qos: QOS }, (error) ->
-			return mqttCb error if error
+		###
+			Is it important to sub to the response topic before sending the action,
+			because there can be a race condition and the sender will never receives
+			the response.
+		###
+		responseTopic = _generateResponseTopic actionId, socketId
+		_mqtt.sub responseTopic, { qos: QOS }, (error, granted) ->
+			return _socket.emit 'error', error if error
+			_actionResultCallbacks[actionId] = resultCb
 
-			topic = _generateResponseTopic actionId, socketId
-			_mqtt.subscribe topic, qos: QOS, (error, granted) ->
-				return _socket.emit 'error', error if error
+			_mqtt.pub topic, actionMessage, { qos: QOS }, (error) ->
+				if error
+					_mqtt.unsubscribe responseTopic, (unsubscribeError) ->
+						return _socket.emit 'error', unsubscribeError if unsubscribeError
+						return _socket.emit 'error', error
 
-				_actionResultCallbacks[actionId] = resultCb
-				mqttCb null, 'OK'
+				mqttCb? null, 'OK'
 
 
 
 
-	_messageHandler = (topic, message) ->
-		topic = topic.toString()
 
-		if RESPONSE_REGEXP.test topic
+
+
+
+	handleMessage = (topic, message, type) ->
+		if type is 'result'
 			return _handleIncomingResults topic, message
 
-		if ACTION_REGEXP.test topic
+		if type is 'action'
 			return _handleIncomingActions topic, message
 
 
 	_handleIncomingActions = (topic, message) ->
-		{ action, payload, origin } = JSON.parse message.toString()
+		debug "Received new action. Topic: #{topic} and message: #{message}\n"
+
+		{ action, payload, origin } = JSON.parse message
 		actionId = _extractActionId topic
 
 		reply = _generateReplyObject origin, actionId, action
@@ -64,7 +78,9 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 
 
 	_handleIncomingResults = (topic, message) ->
-		{ action, statusCode, data } = JSON.parse message.toString()
+		debug "Received new result. Topic: #{topic} and message: #{message}\n"
+
+		{ action, statusCode, data } = JSON.parse message
 		actionId = _extractActionId topic
 
 		_mqtt.unsubscribe topic, (error) ->
@@ -88,7 +104,7 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 		reply.send = ({ type, data }, cb) ->
 			responseMessage = _generateResponse { type, data, action }
 
-			_mqtt.publish(
+			_mqtt.pub(
 				_generateResponseTopic(actionId, origin),
 				responseMessage,
 				qos: QOS,
@@ -109,15 +125,18 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 	_generatePubTopic = (actionId, dest) ->
 		"#{MAIN_TOPIC}/#{dest}/#{actionId}"
 
-	_generateResponse = ({ type, data, action }) ->
+	_generateResponse = ({ type, data = {}, action }) ->
 		throw new Error 'No data provided!' if !data
 		responseType = (data) -> {
 			success: JSON.stringify { statusCode: 'OK', data, action }
-			failure: JSON.stringify { statusCode: 'ERROR', data, action }
+			error: JSON.stringify { statusCode: 'ERROR', data, action }
 		}
 
 		responseType(data)[type]
 
-
-	_socket.on 'message', _messageHandler
-	return { send }
+	return {
+		send
+		handleMessage
+		responseRegex: RESPONSE_REGEXP
+		actionRegex: ACTION_REGEXP
+	}

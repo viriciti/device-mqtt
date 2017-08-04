@@ -4,7 +4,7 @@
   "main": "build/index.js",
   "scripts": {
     "build": "coffee --output build --compile src",
-    "test": "coffeetape test/*.test.coffee | tap-summary ",
+    "test": "coffeetape test/*.test.coffee | tap-summary",
     "test-debug": "coffeetape ./test/*.test.coffee"
   },
   "author": "",
@@ -15,8 +15,12 @@
   },
   "description": "",
   "dependencies": {
-    "mqtt": "^2.9.1",
-    "randomstring": "^1.1.5"
+    "debug": "^2.6.8",
+    "eventemitter2": "^4.1.2",
+    "is-json": "^2.0.1",
+    "mqtt": "^2.10.0",
+    "randomstring": "^1.1.5",
+    "underscore": "^1.8.3"
   },
   "devDependencies": {
     "coffeetape": "^1.0.1",
