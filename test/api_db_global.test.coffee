@@ -7,7 +7,7 @@ devicemqtt = require '../src/index'
 # 	port: 1883
 
 config =
-	host: 'localhost'
+	host: 'toke-mosquitto'
 	port: 1883
 
 ### Testing template
