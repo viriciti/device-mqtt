@@ -8,6 +8,11 @@ QOS        = 2
 class Emitter extends EventEmitter
 
 module.exports = ({ host, port, clientId }, mqttInstance) ->
+	console.log (clientId.indexOf '/') >= 0
+
+	if (clientId.indexOf '/') >= 0
+		throw new Error 'ClientId must not include a `/`'
+
 	if !!mqttInstance
 		throw new Error 'ClientId must be provided!' unless clientId
 
