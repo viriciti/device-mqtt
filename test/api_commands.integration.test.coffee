@@ -17,7 +17,7 @@ devicemqtt = require '../src/index'
 
 # Only for development
 config =
-	host: 'toke-mosquitto'
+	host: 'localhost'
 	port: 1883
 
 
@@ -54,7 +54,7 @@ teardown = (client, cb) ->
 
 test 'client sends an action and receives a response', (assert) ->
 	# Test data
-	expectedResponse = { statusCode: 'OK', data: 'somedata' }
+	expectedResponse = { data: 'somedata' }
 	actionToSend =
 		action: 'theaction'
 		payload: 'payload'
@@ -86,7 +86,7 @@ test 'client sends an action and receives a response', (assert) ->
 	sender.once 'connected', (socket) ->
 		socket.send(
 			actionToSend
-		, (response) ->
+		, (error, response) ->
 				assert.deepEqual response, expectedResponse,
 					"The response should be equal to #{JSON.stringify expectedResponse}"
 				teardownForkedClient receiver
@@ -100,7 +100,7 @@ test 'client sends an action and receives a response', (assert) ->
 
 test 'client sends an action, but the receiver goes offline and then up again', (assert) ->
 	# Test data
-	expectedResponse = { statusCode: 'OK', data: 'somedata' }
+	expectedResponse = { data: 'somedata' }
 	actionToSend =
 		action: 'theaction'
 		payload: 'payload'
@@ -141,7 +141,7 @@ test 'client sends an action, but the receiver goes offline and then up again', 
 	sender.on 'connected', (socket) ->
 		socket.send(
 			actionToSend
-		, (response) ->
+		, (error, response) ->
 				assert.deepEqual response, expectedResponse,
 					"The response should be equal to #{JSON.stringify expectedResponse}"
 				teardownForkedClient receiver
@@ -155,7 +155,7 @@ test 'client sends an action, but the receiver goes offline and then up again', 
 
 test 'the sender send an action and it goes offline', (assert) ->
 	# Test data
-	expectedResponse = { action: 'theaction', statusCode: 'OK', data: 'somedata' }
+	expectedResponse = { action: 'theaction', data: 'somedata' }
 	actionToSend =
 		action: 'theaction'
 		payload: 'payload'
@@ -187,7 +187,7 @@ test 'the sender send an action and it goes offline', (assert) ->
 	sender.once 'connected', (socket) ->
 		socket.send(
 			actionToSend
-		, (response) ->
+		, (error, response) ->
 				return
 		, (error, ack) ->
 				assert.equal ack, 'OK',
@@ -201,7 +201,7 @@ test 'the sender send an action and it goes offline', (assert) ->
 					setTimeout ->
 						sender = setup 'sender3'
 						sender.once 'connected', (socket) ->
-							socket.on 'response', (response) ->
+							socket.on 'response', (error, response) ->
 								assert.deepEqual response, expectedResponse,
 									"The response should be equal to #{JSON.stringify expectedResponse}"
 								teardownForkedClient receiver
@@ -215,7 +215,7 @@ test 'the sender send an action and it goes offline', (assert) ->
 
 test 'sender sends an action, disconnects and sends another action', (assert) ->
 	# Test data
-	expectedResponse = { statusCode: 'OK', data: 'somedata' }
+	expectedResponse = { data: 'somedata' }
 	actionToSend =
 		action: 'theaction'
 		payload: 'payload'
@@ -242,7 +242,7 @@ test 'sender sends an action, disconnects and sends another action', (assert) ->
 		assert.comment 'Sending first action...'
 		socket.send(
 			actionToSend
-		, (response) ->
+		, (error, response) ->
 				assert.deepEqual response, expectedResponse,
 					"The response should be equal to #{JSON.stringify expectedResponse}"
 				teardown sender
@@ -253,7 +253,7 @@ test 'sender sends an action, disconnects and sends another action', (assert) ->
 					sender.once 'connected', (socket) ->
 						socket.send(
 							actionToSend
-						, (response) ->
+						, (error, response) ->
 								assert.deepEqual response, expectedResponse,
 									"The response should be equal to #{JSON.stringify expectedResponse}"
 								teardown sender
