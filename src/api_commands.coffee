@@ -87,10 +87,17 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 			return _socket.emit 'error', error if error
 
 			if _actionResultCallbacks[actionId]
-				_actionResultCallbacks[actionId]({ statusCode, data })
+				if statusCode is 'OK'
+					_actionResultCallbacks[actionId] null, { data }
+				else
+					_actionResultCallbacks[actionId] { data }
 				delete _actionResultCallbacks[actionId]
 			else
-				_socket.emit 'response', { action, statusCode, data }
+			if statusCode is 'OK'
+				_socket.emit 'response', null, { action, data }
+			else
+				_socket.emit 'response', { action, data }
+
 
 
 
