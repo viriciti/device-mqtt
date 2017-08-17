@@ -9,21 +9,21 @@ mqtt         = require 'mqtt'
 
 MAIN_TOPIC        = 'device-mqtt'
 COLLECTIONS_TOPIC = 'collections'
-QOS        = 2
+QOS               = 2
 
 
 class Emitter extends EventEmitter
 
-module.exports = ({ host, port, clientId }, mqttInstance) ->
+module.exports = ({ host, port, clientId }) ->
 	ACTIONS_TOPIC        = "#{MAIN_TOPIC}/#{clientId}/+"
 	SINGLE_ITEM_DB_TOPIC = "#{clientId}/collections/+"
 	OBJECT_DB_TOPIC      = "#{clientId}/collections/+/+"
 
-	if (clientId.indexOf '/') >= 0
-		throw new Error 'ClientId must not include a `/`'
+	if !clientId
+		throw new Error 'clientId must be provided'
 
-	if !!mqttInstance
-		throw new Error 'ClientId must be provided!' unless clientId
+	if (clientId.indexOf '/') >= 0
+		throw new Error 'clientId must not include a `/`'
 
 	api_commands = null
 	api_db       = null
@@ -32,13 +32,20 @@ module.exports = ({ host, port, clientId }, mqttInstance) ->
 	_mqtt        = null
 
 
-	connect = ->
-		if mqttInstance
-			_initApis _mqtt
+	connect = (will) ->
+		connectionOptions = {}
+
+		if will
+			will = Object.assign {}, will, { qos: 2, retain: true }
+			connectionOptions = { clientId, clean: false, will }
 		else
-			_mqtt = mqtt.connect "mqtt://#{host}:#{port}", { clientId, clean: false }
-			_init _mqtt
-			_initApis _mqtt
+			connectionOptions = { clientId, clean: false }
+
+		_mqttUrl = "mqtt://#{host}:#{port}"
+		_mqtt = mqtt.connect _mqttUrl, connectionOptions
+		_init _mqtt
+		_initApis _mqtt
+
 
 	destroy = (cb) ->
 		_mqtt.end cb
@@ -119,8 +126,14 @@ module.exports = ({ host, port, clientId }, mqttInstance) ->
 				subscribe again to the topics.
 			###
 			if connack.sessionPresent
-				_client.emit 'connected', _createSocket()
-				return _subscribeToDbTopics ->
+				###
+					Subscribing to the db topics is needed because
+					even if there is a persistent session, the
+					retained messages are not received.
+				###
+				return _subscribeToDbTopics (error) ->
+					return _client.emit 'error', error if error
+					_client.emit 'connected', _createSocket()
 					_startListeningToMessages()
 
 			_subscribeFirstTime (error) ->
@@ -141,7 +154,7 @@ module.exports = ({ host, port, clientId }, mqttInstance) ->
 		mqttInstance.on 'reconnect', _onReconnect
 		mqttInstance.on 'close', _onClose
 
-		mqttInstance.on 'packetreceive', console.log
+
 
 
 	_createClient = ->
