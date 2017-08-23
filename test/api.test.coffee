@@ -23,7 +23,7 @@ test 'What component aspect are you testing?', (assert) ->
 
 setup = (clientId)->
 	client = null
-	client = devicemqtt Object.assign({}, config, { clientId })
+	client = devicemqtt(Object.assign {}, config, { clientId })
 	return client
 
 teardown = (client) ->
@@ -53,8 +53,7 @@ test 'constructor', (assert) ->
 
 	assert.comment 'Test: clientId passed to the constructor'
 	assert.doesNotThrow (() ->
-		client = devicemqtt Object.assign({}, config, { clientId: 'client' }),
-			'the constructor should not throw an error.'
+		client = devicemqtt(Object.assign({}, config, { clientId: 'client' }))
 	)
 
 
