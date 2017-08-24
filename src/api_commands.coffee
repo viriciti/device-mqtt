@@ -32,15 +32,27 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 		actionId = randomstring.generate()
 		topic    = _generatePubTopic actionId, message.dest
 
-		_mqtt.publish topic, actionMessage, { qos: QOS }, (error) ->
-			return mqttCb? error if error
+		###
+			Is it important to subscribe to the response topic before sending the action,
+			because there can be a race condition and the sender will never receives
+			the response.
+		###
+		responseTopic = _generateResponseTopic actionId, socketId
+		_mqtt.subscribe responseTopic, qos: QOS, (error, granted) ->
+			return _socket.emit 'error', error if error
+			_actionResultCallbacks[actionId] = resultCb
 
-			topic = _generateResponseTopic actionId, socketId
-			_mqtt.subscribe topic, qos: QOS, (error, granted) ->
-				return _socket.emit 'error', error if error
+			_mqtt.publish topic, actionMessage, { qos: QOS }, (error) ->
+				if error
+					_mqtt.unsubscribe responseTopic, (unsubscribeError) ->
+						return _socket.emit 'error', unsubscribeError if unsubscribeError
+						return _socket.emit 'error', error
 
-				_actionResultCallbacks[actionId] = resultCb
 				mqttCb? null, 'OK'
+
+
+
+
 
 
 
