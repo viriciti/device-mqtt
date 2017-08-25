@@ -51,6 +51,12 @@ module.exports = ({ host, port, clientId }) ->
 		_mqtt.end cb
 
 
+	customPublish = ({ topic, message, opts }, cb) ->
+		_mqtt.publish topic, message, opts, (error) ->
+			return cb error if error
+			cb()
+
+
 
 
 	_initApis = (_mqtt) ->
@@ -114,6 +120,7 @@ module.exports = ({ host, port, clientId }) ->
 
 		_socket.send = send
 		_socket.createCollection = createCollection
+		_socket.customPublish = customPublish
 		_socket
 
 
