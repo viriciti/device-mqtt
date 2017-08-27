@@ -195,13 +195,7 @@ test 'get all item of the collection with getAll()', (assert) ->
 	client.connect()
 
 
-test 'REMINDER!!!!!!', (assert) ->
-	assert.comment 'RUN THE NEXT TESTS ONE BY ONE, RESTARTING THE BROKER EACH TIME'
-	assert.end()
-
-
-# For this test the broker needs to be restarted.
-test.skip 'Retrieve single item of a collection', (assert) ->
+test 'Retrieve single item of a collection', (assert) ->
 	client = setup 'client_api_db_retrieve_item'
 	collectionName = 'testcollection'
 	testobject = {}
@@ -233,7 +227,6 @@ test.skip 'Retrieve single item of a collection', (assert) ->
 
 	client.connect()
 
-# For this test the broker needs to be restarted.
 test 'Retrieve full collection object', (assert) ->
 	client = setup 'client_api_db_retrieve_object'
 	collectionName = 'testcollection'
@@ -268,6 +261,10 @@ test 'Retrieve full collection object', (assert) ->
 
 	client.connect()
 
+
+test 'REMINDER!!!!!!', (assert) ->
+	assert.comment 'RUN THE NEXT TESTS ONE BY ONE, RESTARTING THE BROKER EACH TIME'
+	assert.end()
 
 # For this test the broker needs to be restarted.
 test.skip 'The client saves an item and receives the new config object', (assert) ->
