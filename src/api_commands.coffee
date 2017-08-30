@@ -125,7 +125,7 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 	_generatePubTopic = (actionId, dest) ->
 		"#{MAIN_TOPIC}/#{dest}/#{actionId}"
 
-	_generateResponse = ({ type, data, action }) ->
+	_generateResponse = ({ type, data = {}, action }) ->
 		throw new Error 'No data provided!' if !data
 		responseType = (data) -> {
 			success: JSON.stringify { statusCode: 'OK', data, action }

@@ -16,8 +16,9 @@
   "description": "",
   "dependencies": {
     "debug": "^2.6.8",
+    "eventemitter2": "^4.1.2",
     "is-json": "^2.0.1",
-    "mqtt": "^2.9.2",
+    "mqtt": "^2.10.0",
     "randomstring": "^1.1.5",
     "underscore": "^1.8.3"
   },

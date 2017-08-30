@@ -4,22 +4,20 @@
 # 	debugSockets: true
 # }
 
-EventEmitter  = require 'events'
+EventEmitter2 = require('eventemitter2').EventEmitter2
 mqtt          = require 'mqtt'
 MqttDecorator = require './MqttDecorator'
-
 
 MAIN_TOPIC        = 'commands'
 COLLECTIONS_TOPIC = 'collections'
 QOS               = 2
 
-
-class Emitter extends EventEmitter
-
 module.exports = ({ host, port, clientId }) ->
-	ACTIONS_TOPIC        = "#{MAIN_TOPIC}/#{clientId}/+"
-	SINGLE_ITEM_DB_TOPIC = "#{clientId}/collections/+"
-	OBJECT_DB_TOPIC      = "#{clientId}/collections/+/+"
+	ACTIONS_TOPIC               = "#{MAIN_TOPIC}/#{clientId}/+"
+	SINGLE_ITEM_DB_TOPIC        = "#{clientId}/collections/+"
+	OBJECT_DB_TOPIC             = "#{clientId}/collections/+/+"
+	GLOBAL_OBJECT_DB_TOPIC      = "global/collections/+"
+	SINGLE_ITEM_GLOBAL_DB_TOPIC = "global/collections/+/+"
 
 	if !clientId
 		throw new Error 'clientId must be provided'
@@ -29,8 +27,8 @@ module.exports = ({ host, port, clientId }) ->
 
 	api_commands = null
 	api_db       = null
-	_client      = new Emitter
-	_socket      = new Emitter
+	_client      = new EventEmitter2
+	_socket      = new EventEmitter2 wildcard: true, delimiter: '/'
 	_mqtt        = null
 
 
@@ -81,7 +79,13 @@ module.exports = ({ host, port, clientId }) ->
 	_subFirstTime = (cb) ->
 		_startListeningToMessages()
 		_mqtt.sub(
-			[ACTIONS_TOPIC, SINGLE_ITEM_DB_TOPIC, OBJECT_DB_TOPIC],
+			[
+				ACTIONS_TOPIC,
+				SINGLE_ITEM_DB_TOPIC,
+				OBJECT_DB_TOPIC,
+				GLOBAL_OBJECT_DB_TOPIC,
+				SINGLE_ITEM_GLOBAL_DB_TOPIC
+			],
 			{ qos: QOS },
 			(error, granted) ->
 				if error
@@ -92,7 +96,11 @@ module.exports = ({ host, port, clientId }) ->
 
 	_subToDbTopics = (cb) ->
 		_mqtt.sub(
-			[SINGLE_ITEM_DB_TOPIC, OBJECT_DB_TOPIC],
+			[
+				SINGLE_ITEM_DB_TOPIC,
+				OBJECT_DB_TOPIC,
+				GLOBAL_OBJECT_DB_TOPIC,
+				SINGLE_ITEM_GLOBAL_DB_TOPIC]
 			{ qos: QOS },
 			(error, granted) ->
 				if error
@@ -106,7 +114,7 @@ module.exports = ({ host, port, clientId }) ->
 
 	_messageHandler = (topic, message) ->
 		{ responseRegex, actionRegex } = api_commands
-		{ dbRegex } = api_db
+		{ dbRegex, globalRegex } = api_db
 
 		topic = topic.toString()
 		message = message.toString()
@@ -116,7 +124,9 @@ module.exports = ({ host, port, clientId }) ->
 		else if actionRegex.test topic
 			api_commands.handleMessage topic, message, 'action'
 		else if dbRegex.test topic
-			api_db.handleMessage topic, message
+			api_db.handleMessage topic, message, 'local'
+		else if globalRegex.test topic
+			api_db.handleMessage topic, message, 'global'
 		else
 			_socket.emit topic, message
 
@@ -124,10 +134,11 @@ module.exports = ({ host, port, clientId }) ->
 
 	_createSocket = ->
 		{ send } = api_commands
-		{ createCollection } = api_db
+		{ createCollection, createGlobalCollection } = api_db
 
 		_socket.send = send
 		_socket.createCollection = createCollection
+		_socket.createGlobalCollection = createGlobalCollection
 		_socket.customPublish = customPublish
 		_socket.customSubscribe = customSubscribe
 		_socket
