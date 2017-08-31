@@ -7,12 +7,13 @@
 EventEmitter2 = require('eventemitter2').EventEmitter2
 mqtt          = require 'mqtt'
 MqttDecorator = require './MqttDecorator'
+fs            = require 'fs'
 
 MAIN_TOPIC        = 'commands'
 COLLECTIONS_TOPIC = 'collections'
 QOS               = 2
 
-module.exports = ({ host, port, clientId }) ->
+module.exports = ({ host, port, clientId, tls = {}, extraOpts = {} }) ->
 	ACTIONS_TOPIC               = "#{MAIN_TOPIC}/#{clientId}/+"
 	SINGLE_ITEM_DB_TOPIC        = "#{clientId}/collections/+"
 	OBJECT_DB_TOPIC             = "#{clientId}/collections/+/+"
@@ -34,14 +35,23 @@ module.exports = ({ host, port, clientId }) ->
 
 	connect = (will) ->
 		connectionOptions = {}
+		_mqttUrl = "mqtt://#{host}:#{port}"
+
+		if (Object.keys(tls).length > 0)
+			connectionOptions = Object.assign {}, connectionOptions, (_loadTlsFiles tls)
+			_mqttUrl = "mqtts://#{host}:#{port}"
+
+		if (Object.keys(extraOpts).length > 0)
+			connectionOptions = Object.assign {}, connectionOptions, extraOpts
 
 		if will
 			will = Object.assign {}, will, { qos: 2, retain: true }
-			connectionOptions = { clientId, clean: false, will }
+			connectionOptions =
+				Object.assign {}, connectionOptions, { clientId, clean: false, will }
 		else
-			connectionOptions = { clientId, clean: false }
+			connectionOptions =
+				Object.assign {}, connectionOptions, { clientId, clean: false }
 
-		_mqttUrl = "mqtt://#{host}:#{port}"
 		_mqtt = mqtt.connect _mqttUrl, connectionOptions
 		_mqtt = MqttDecorator _mqtt
 
@@ -60,6 +70,13 @@ module.exports = ({ host, port, clientId }) ->
 		_mqtt.subscribe topic, opts, cb
 
 
+
+	_loadTlsFiles = ({ key, ca, cert }) ->
+		return {
+			key: fs.readFileSync key
+			ca: [fs.readFileSync ca]
+			cert: fs.readFileSync cert
+		}
 
 
 	_initApis = (_mqtt) ->
