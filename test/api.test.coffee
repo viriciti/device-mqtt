@@ -1,13 +1,13 @@
 test   = require 'tape'
 devicemqtt = require '../src/index'
 
-# config =
-# 	host: 'toke-mosquitto'
-# 	port: 1883
-
 config =
-	host: 'localhost'
+	host: 'toke-mosquitto'
 	port: 1883
+
+# config =
+# 	host: 'localhost'
+# 	port: 1883
 
 ### Testing template
 
