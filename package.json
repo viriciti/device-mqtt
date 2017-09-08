@@ -1,10 +1,11 @@
 {
   "name": "@tn-group/device-mqtt",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "main": "build/index.js",
   "scripts": {
     "build": "coffee --output build --compile src",
     "test": "coffeetape test/*.test.coffee | tap-summary",
+    "test-dev": "NODE_ENV=development coffeetape test/*.test.coffee | tap-summary",
     "test-debug": "coffeetape ./test/*.test.coffee"
   },
   "author": "",
@@ -21,10 +22,10 @@
     "mqtt": "^2.12.1",
     "randomstring": "^1.1.5",
     "tape": "^4.8.0",
-    "underscore": "^1.8.3"
+    "underscore": "^1.8.3",
+    "async": "^2.5.0"
   },
   "devDependencies": {
-    "async": "^2.5.0",
     "coffeetape": "^1.0.1",
     "leaked-handles": "^5.2.0",
     "tap-summary": "^3.0.2",
