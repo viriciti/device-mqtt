@@ -95,14 +95,15 @@ module.exports = ({ host, port, clientId, tls = {}, extraOpts = {} }) ->
 
 	_subFirstTime = (cb) ->
 		_startListeningToMessages()
-		_mqtt.sub(
-			[
-				ACTIONS_TOPIC,
-				SINGLE_ITEM_DB_TOPIC,
-				OBJECT_DB_TOPIC,
-				GLOBAL_OBJECT_DB_TOPIC,
-				SINGLE_ITEM_GLOBAL_DB_TOPIC
-			],
+		topics = [
+			ACTIONS_TOPIC,
+			SINGLE_ITEM_DB_TOPIC,
+			OBJECT_DB_TOPIC,
+			GLOBAL_OBJECT_DB_TOPIC,
+			SINGLE_ITEM_GLOBAL_DB_TOPIC
+		]
+
+		_mqtt.sub(topics,
 			{ qos: QOS },
 			(error, granted) ->
 				if error
@@ -112,12 +113,14 @@ module.exports = ({ host, port, clientId, tls = {}, extraOpts = {} }) ->
 		)
 
 	_subToDbTopics = (cb) ->
-		_mqtt.sub(
-			[
+		topics = [
 				SINGLE_ITEM_DB_TOPIC,
 				OBJECT_DB_TOPIC,
 				GLOBAL_OBJECT_DB_TOPIC,
-				SINGLE_ITEM_GLOBAL_DB_TOPIC]
+				SINGLE_ITEM_GLOBAL_DB_TOPIC
+			]
+
+		_mqtt.sub(topics,
 			{ qos: QOS },
 			(error, granted) ->
 				if error
@@ -189,6 +192,8 @@ module.exports = ({ host, port, clientId, tls = {}, extraOpts = {} }) ->
 
 		_onClose = ->
 			_client.emit 'disconnected'
+			_socket.emit 'disconnected'
+			_mqtt.removeListener 'message', _messageHandler
 
 		_onError = (error) ->
 			_client.emit 'error', error
