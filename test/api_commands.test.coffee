@@ -5,9 +5,10 @@ config =
 	host: 'toke-mosquitto'
 	port: 1883
 
-# config =
-# 	host: 'localhost'
-# 	port: 1883
+if process.env.NODE_ENV is 'development'
+	config =
+		host: 'localhost'
+		port: 1883
 
 ### Testing template
 

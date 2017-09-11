@@ -1,14 +1,16 @@
 test       = require 'tape'
 devicemqtt = require '../src/index'
-{ fork }   = require "child_process"
+{ fork }   = require 'child_process'
+async      = require 'async'
 
 config =
 	host: 'toke-mosquitto'
 	port: 1883
 
-# config =
-# 	host: 'localhost'
-# 	port: 1883
+if process.env.NODE_ENV is 'development'
+	config =
+		host: 'localhost'
+		port: 1883
 
 ### Testing template
 
@@ -85,24 +87,33 @@ test 'The client saves items, delete one and updates the other', (assert) ->
 		,	testobject
 		,
 			(collection) ->
-				assert.comment 'Adding two items...'
-				collection.add { key: 'key', value: 'value' }, (error) ->
+				async.series [
+					(next) ->
+						collection.add { key: 'key', value: 'value' }, next
 
-					collection.add { key: 'key1', value: { justAnObject: 'value1' } }, (error) ->
+					(next) ->
+						collection.add { key: 'key1', value: { justAnObject: 'value1' } }, next
+
+					(next) ->
 						collection.add { key: 'key2', value: 'value2' }, (error) ->
 							assert.deepEqual testObjectAfterAdd, testobject,
 								'the local state should have the added items'
+							next()
 
-							collection.remove 'key1', (error) ->
-								assert.deepEqual testObjectAfterRemove, testobject,
-									'the local state should not have the removed item'
+					(next) ->
+						collection.remove 'key1', (error) ->
+							assert.deepEqual testObjectAfterRemove, testobject,
+								'the local state should not have the removed item'
+							next()
 
-								collection.update { key: 'key', value: 'updatedvalue' }, (error) ->
-									assert.deepEqual testObjectAfterUpdate, testobject,
-										'the local state should have an updated item'
-
-									teardown client
-									assert.end()
+					(next) ->
+						collection.update { key: 'key', value: 'updatedvalue' }, (error) ->
+							assert.deepEqual testObjectAfterUpdate, testobject,
+								'the local state should have an updated item'
+							next()
+				], (error) ->
+					teardown client
+					assert.end()
 		)
 
 	client.connect()
@@ -184,12 +195,18 @@ test 'get all item of the collection with getAll()', (assert) ->
 		,	testobject
 		,
 			(collection) ->
-				assert.comment 'Adding two items...'
-				collection.add { key: 'key', value: 'value' }, (error) ->
-					collection.add { key: 'key1', value: [ 'value1' ] }, (error) ->
-						assert.deepEqual testObjectAfterAdd, collection.getAll()
-						teardown client
-						assert.end()
+				async.series [
+					(next) ->
+						collection.add { key: 'key', value: 'value' }, next
+
+					(next) ->
+						collection.add { key: 'key1', value: [ 'value1' ] }, (error) ->
+							assert.deepEqual testObjectAfterAdd, collection.getAll()
+							next()
+
+				], (error) ->
+					teardown client
+					assert.end()
 	)
 
 	client.connect()
@@ -213,7 +230,6 @@ test 'Retrieve single item of a collection', (assert) ->
 
 					client = setup 'client_api_db_retrieve_item'
 					client.once 'connected', (socket) ->
-						console.log 'connected'
 						socket.on "collection:#{collectionName}", (collection) ->
 							assert.equal receivedCollection, collection
 							teardown client
@@ -246,7 +262,6 @@ test 'Retrieve full collection object', (assert) ->
 
 						client = setup 'client_api_db_retrieve_object'
 						client.once 'connected', (socket) ->
-							console.log 'connected'
 							socket.on "collection", (collName, collection) ->
 								assert.equal collName, collectionName
 								assert.deepEqual receivedCollection, collection
@@ -260,11 +275,6 @@ test 'Retrieve full collection object', (assert) ->
 		)
 
 	client.connect()
-
-
-test 'REMINDER!!!!!!', (assert) ->
-	assert.comment 'RUN THE NEXT TESTS ONE BY ONE, RESTARTING THE BROKER EACH TIME'
-	assert.end()
 
 # For this test the broker needs to be restarted.
 test.skip 'The client saves an item and receives the new config object', (assert) ->
