@@ -21,6 +21,8 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 
 	send = (message, resultCb, mqttCb) ->
 		{ action, dest, payload } = message
+
+		debug "Sending action #{action} to #{dest} with payload: #{payload}"
 		throw new Error 'No action provided!' if !action
 		throw new Error 'No dest provided!' if !dest
 		throw new Error 'Action must be a string' if typeof message.action isnt 'string'
@@ -58,6 +60,8 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 
 
 	handleMessage = (topic, message, type) ->
+		debug "Received message. Topic: #{topic.toString()}, payload: #{message}, type: #{type}"
+		
 		if type is 'result'
 			return _handleIncomingResults topic, message
 
@@ -127,7 +131,11 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 
 
 	_generateResponseTopic = (actionId, origin) ->
-		"#{MAIN_TOPIC}/#{origin}/#{actionId}/#{RESPONSE_SUBTOPIC}"
+		debug "Generating response topic with actionId #{actionId} and origin #{origin}"
+		responseTopic = "#{MAIN_TOPIC}/#{origin}/#{actionId}/#{RESPONSE_SUBTOPIC}"
+
+		debug "Generated response topic: #{responseTopic}"
+		return responseTopic
 
 	_generatePubTopic = (actionId, dest) ->
 		"#{MAIN_TOPIC}/#{dest}/#{actionId}"

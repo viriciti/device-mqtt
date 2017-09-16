@@ -8,6 +8,7 @@ EventEmitter2 = require('eventemitter2').EventEmitter2
 mqtt          = require 'mqtt'
 MqttDecorator = require './MqttDecorator'
 fs            = require 'fs'
+debug         = require 'debug'
 
 MAIN_TOPIC        = 'commands'
 COLLECTIONS_TOPIC = 'collections'
@@ -52,6 +53,7 @@ module.exports = ({ host, port, clientId, tls = {}, extraOpts = {} }) ->
 			connectionOptions =
 				Object.assign {}, connectionOptions, { clientId, clean: false }
 
+		debug "Connecting to MQTT with url #{_mqttUrl} and options #{connectionOptions}"
 		_mqtt = mqtt.connect _mqttUrl, connectionOptions
 		_mqtt = MqttDecorator _mqtt
 
@@ -103,12 +105,15 @@ module.exports = ({ host, port, clientId, tls = {}, extraOpts = {} }) ->
 			SINGLE_ITEM_GLOBAL_DB_TOPIC
 		]
 
+		debug "Subscribing to topics for first time: #{topics}"
+
 		_mqtt.sub(topics,
 			{ qos: QOS },
 			(error, granted) ->
 				if error
 					errorMsg = "Error subscribing to actions topic. Reason: #{error.message}"
 					return cb new Error errorMsg
+				debug "Subscribed correctly to topics #{topics}"
 				cb()
 		)
 
@@ -120,12 +125,15 @@ module.exports = ({ host, port, clientId, tls = {}, extraOpts = {} }) ->
 				SINGLE_ITEM_GLOBAL_DB_TOPIC
 			]
 
+		debug "Subscribing to db topics: #{topics}"
+
 		_mqtt.sub(topics,
 			{ qos: QOS },
 			(error, granted) ->
 				if error
 					errorMsg = "Error subscribing to actions topic. Reason: #{error.message}"
 					return cb new Error errorMsg
+				debug "Subscribed correctly to topics #{topics}"
 				cb()
 		)
 
@@ -140,14 +148,19 @@ module.exports = ({ host, port, clientId, tls = {}, extraOpts = {} }) ->
 		message = message.toString()
 
 		if responseRegex.test topic
+			debug "Received response message: #{topic}"
 			api_commands.handleMessage topic, message, 'result'
 		else if actionRegex.test topic
+			debug "Received action message: #{topic}"
 			api_commands.handleMessage topic, message, 'action'
 		else if dbRegex.test topic
+			debug "Received db message: #{topic}"			
 			api_db.handleMessage topic, message, 'local'
 		else if globalRegex.test topic
+			debug "Received global message: #{topic}"			
 			api_db.handleMessage topic, message, 'global'
 		else
+			debug "Received other message: #{topic}"			
 			_socket.emit topic, message
 
 
