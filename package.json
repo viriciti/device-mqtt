@@ -1,6 +1,6 @@
 {
   "name": "@tn-group/device-mqtt",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "main": "build/index.js",
   "scripts": {
     "build": "coffee --output build --compile src",
