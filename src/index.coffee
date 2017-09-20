@@ -185,16 +185,16 @@ module.exports = ({ host, port, clientId, tls = {}, extraOpts = {} }) ->
 				If the session is there, there is no need to
 				sub again to the topics.
 			###
-			if connack.sessionPresent
-				###
-					Subscribing to the db topics is needed because
-					even if there is a persistent session, the
-					retained messages are not received.
-				###
-				return _subToDbTopics (error) ->
-					return _client.emit 'error', error if error
-					_client.emit 'connected', _createSocket()
-					_startListeningToMessages()
+			# if connack.sessionPresent
+			# 	###
+			# 		Subscribing to the db topics is needed because
+			# 		even if there is a persistent session, the
+			# 		retained messages are not received.
+			# 	###
+			# 	return _subToDbTopics (error) ->
+			# 		return _client.emit 'error', error if error
+			# 		_client.emit 'connected', _createSocket()
+			# 		_startListeningToMessages()
 
 			_subFirstTime (error) ->
 				_client.emit 'error', error if error
