@@ -55,8 +55,8 @@
 
 # Usage
 
-```javascript
-  devicemqtt = require '@tn-group/device-mqtt'
+```coffee-script
+  devicemqtt = require 'device-mqtt'
 
   client = devicemqtt host, port, 'client'
 
@@ -66,6 +66,6 @@
     , (error, response) ->
 
     , (error, ack) ->
-    
+
     )
 ```
