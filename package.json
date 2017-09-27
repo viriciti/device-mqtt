@@ -1,6 +1,6 @@
 {
   "name": "device-mqtt",
-  "version": "1.0.7",
+  "version": "1.0.9",
   "main": "build/index.js",
   "scripts": {
     "build": "coffee --output build --compile src",
@@ -11,7 +11,7 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "[git@git.viriciti.com:10022]:device/device-mqtt.git"
+    "url": "https://github.com/viriciti/device-mqtt.git"
   },
   "description": "",
   "dependencies": {
