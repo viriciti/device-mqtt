@@ -16,14 +16,14 @@
   },
   "description": "",
   "dependencies": {
+    "async": "^2.5.0",
     "debug": "^2.6.8",
     "eventemitter2": "^4.1.2",
     "is-json": "^2.0.1",
-    "mqtt": "^2.12.1",
+    "mqtt": "^2.13.0",
     "randomstring": "^1.1.5",
     "tape": "^4.8.0",
-    "underscore": "^1.8.3",
-    "async": "^2.5.0"
+    "underscore": "^1.8.3"
   },
   "devDependencies": {
     "coffeetape": "^1.0.1",
