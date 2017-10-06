@@ -30,6 +30,8 @@ module.exports = ({ host, port, clientId, tls = {}, extraOpts = {} }) ->
 	api_commands = null
 	api_db       = null
 	_client      = new EventEmitter2
+	_client.connected = false
+	
 	_socket      = new EventEmitter2 wildcard: true, delimiter: '/'
 	_mqtt        = null
 
@@ -179,6 +181,8 @@ module.exports = ({ host, port, clientId, tls = {}, extraOpts = {} }) ->
 
 	_init = (mqttInstance) ->
 		_onConnection = (connack) ->
+			_client.connected = true
+
 			###
 				The connack.sessionPresent is set to `true` if
 				the client has already a persistent session.
@@ -207,6 +211,7 @@ module.exports = ({ host, port, clientId, tls = {}, extraOpts = {} }) ->
 			_client.emit 'disconnected'
 			_socket.emit 'disconnected'
 			_mqtt.removeListener 'message', _messageHandler
+			_client.connected = false
 
 		_onError = (error) ->
 			_client.emit 'error', error

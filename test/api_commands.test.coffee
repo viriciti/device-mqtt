@@ -36,7 +36,6 @@ teardown = (client) ->
 test 'client sending a message', (assert) ->
 	client = setup 'client_send'
 	client.once 'connected', (socket) ->
-
 		assert.comment "Test: no action value is provided."
 		assert.throws (() ->
 			socket.send action: '', payload: 'payload', dest: 'dest'),
