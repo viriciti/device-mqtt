@@ -67,7 +67,7 @@ module.exports = ({ host, port, clientId, tls = {}, extraOpts = {} }) ->
 		debug "[MQTT client] Ending"
 		_mqtt.end (error) ->
 			debug "[MQTT client] Ended"
-			cb error
+			cb? error
 
 	customPublish = ({ topic, message, opts }, cb) ->
 		_mqtt.publish topic, message, opts, cb
