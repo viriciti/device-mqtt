@@ -1,14 +1,11 @@
-EventEmitter = require 'events'
 randomstring = require 'randomstring'
 isJson       = require 'is-json'
+debug        = (require 'debug') "device-mqtt:api_db"
 
 QOS = 2
 COLLECTIONS_TOPIC = 'collections'
 COLLECTION_POSITION = 2
 GLOBAL_COLLECTION_POSITION = 2
-
-
-class Emitter extends EventEmitter
 
 module.exports = ({ mqttInstance, socket, socketId }) ->
 	throw new Error 'No mqtt connection provided!' unless mqttInstance
@@ -21,14 +18,12 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 
 	createCollection = (collectionName, localState, collectionObjCb) ->
 		singleObjCollTopic = "#{socketId}/#{COLLECTIONS_TOPIC}/#{collectionName}"
+		debug "createCollection", singleObjCollTopic
 		collectionObjCb(_createCollectionObject singleObjCollTopic, localState)
 
 	createGlobalCollection = (collectionName, localState, collectionObjCb) ->
 		singleGlobalObjCollTopic = "global/collections/#{collectionName}"
 		collectionObjCb(_createCollectionObject singleGlobalObjCollTopic, localState)
-
-
-
 
 	_createCollectionObject = (singleObjCollTopic, localState) ->
 		collectionObj = {}
@@ -94,12 +89,8 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 
 		return collectionObj
 
-
-
-
 	_isJson = (object) ->
 		return isJson object, [passObjects=true]
-
 
 	_updateCollectionObject = (singleObjCollTopic, localState, cb) ->
 		_mqtt.pub singleObjCollTopic,
@@ -108,7 +99,6 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 			(error) ->
 				return done error if error
 				cb()
-
 
 	handleMessage = (topic, message, collectionType) ->
 		switch collectionType
@@ -142,9 +132,6 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 
 	_extractGlobalCollectionName = (topic) ->
 		(topic.split '/')[GLOBAL_COLLECTION_POSITION]
-
-
-
 
 	return {
 		createCollection
