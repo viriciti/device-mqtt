@@ -1,6 +1,5 @@
-EventEmitter = require 'events'
 randomstring = require 'randomstring'
-debug        = (require 'debug') 'api_commands'
+debug        = (require 'debug') "device-mqtt:api_commands"
 
 QOS               = 2
 MAIN_TOPIC        = 'commands'
@@ -8,8 +7,6 @@ RESPONSE_SUBTOPIC = 'response'
 ACTIONID_POSITION = 2
 RESPONSE_REGEXP   = new RegExp "^#{MAIN_TOPIC}\/(.)+\/([a-zA-Z0-9])+\/#{RESPONSE_SUBTOPIC}"
 ACTION_REGEXP     = new RegExp "^#{MAIN_TOPIC}\/(.)+\/([a-zA-Z0-9])+"
-
-class Emitter extends EventEmitter
 
 module.exports = ({ mqttInstance, socket, socketId }) ->
 	throw new Error 'No mqtt connection provided!' unless mqttInstance
@@ -52,22 +49,14 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 
 				mqttCb? null, 'OK'
 
-
-
-
-
-
-
-
 	handleMessage = (topic, message, type) ->
 		debug "Received message. Topic: #{topic.toString()}, payload: #{message}, type: #{type}"
-		
+
 		if type is 'result'
 			return _handleIncomingResults topic, message
 
 		if type is 'action'
 			return _handleIncomingActions topic, message
-
 
 	_handleIncomingActions = (topic, message) ->
 		debug "Received new action. Topic: #{topic} and message: #{message}\n"
@@ -79,7 +68,6 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 
 		_socket.emit "action", action, payload, reply
 		_socket.emit "action:#{action}", payload, reply
-
 
 	_handleIncomingResults = (topic, message) ->
 		debug "Received new result. Topic: #{topic} and message: #{message}\n"
@@ -101,9 +89,6 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 				_socket.emit 'response', null, { action, data }
 			else
 				_socket.emit 'response', { action, data }
-
-
-
 
 	_extractActionId = (topic) ->
 		topic = topic.toString()
@@ -127,8 +112,6 @@ module.exports = ({ mqttInstance, socket, socketId }) ->
 			)
 
 		return reply
-
-
 
 	_generateResponseTopic = (actionId, origin) ->
 		debug "Generating response topic with actionId #{actionId} and origin #{origin}"
